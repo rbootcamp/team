@@ -1,5 +1,5 @@
-setwd("~/")
-pacman::p_load(tidyverse, janitor)
+setwd("~/OneDrive - A STAR/Desktop/Bootcamp project")
+pacman::p_load(tidyverse, readxl, janitor)
 rm(list=ls())
 
 
