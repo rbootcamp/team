@@ -110,7 +110,7 @@ gid <- comb %>%
 head(gid)
 
 
-# FOR LOOP FOR WILCOX-TEST
+# FOR LOOP FOR WILCOX-TEST #
   
   
 for(i in rownames(gid)){
@@ -121,15 +121,18 @@ for(i in rownames(gid)){
 save(gid, file="gid.rda")
 #load("gid.rda")
 
+# Data exploration #
+
 min(gid$p, na.rm= TRUE)
 
 gid %>% filter(p < 0.05/54098)
-
 
 ggplot(gid, aes(x=p)) +
   geom_histogram(alpha=0.4) +
   labs(x=NULL, y=NULL, title="P-value") +
   theme_bw()
+
+# Test GLM #
 
 combtest <- b %>% mutate(response4 = recode(measure_of_response, "Clinical Progressive Disease"= 0, 
                                      "Stable Disease" = 0, "Complete Response" = 1, 
