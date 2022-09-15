@@ -1,14 +1,14 @@
 setwd("C:/Users/chiasm1/Dropbox/PC/Desktop/R_Bootcamp/capstone")
-pacman::p_load(tidyverse, janitor, ggplot2)
+pacman::p_load(tidyverse, janitor, readxl, ggplot2)
 rm(list=ls())
 
 
 
 ##read tgca files
 
-tcga_case_data<-read.csv("TCGA drug response_Rboot_2.csv")
-tcga_coad<-read.csv("TCGA_COAD_TMM_p400_common_Rboot.csv")
-tcga_read<-read.csv("TCGA_READ_TMM_p400_common_Rboot.csv")
+tcga_case_data<-read_csv("TCGA drug response_Rboot_2.csv")
+tcga_coad<-read_csv("TCGA_COAD_TMM_p400_common_Rboot.csv")
+tcga_read<-read_csv("TCGA_READ_TMM_p400_common_Rboot.csv")
 tcga_coad_read<-merge(tcga_coad,tcga_read,by="gene_id")
 tcga_case_data$measure_of_response
 
