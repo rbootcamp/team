@@ -131,8 +131,7 @@ gid %>% filter(p < 0.05/54098)
 
 ggplot(gid, aes(x=p)) +
   geom_histogram(alpha=0.4) +
-  labs(x=NULL, y=NULL, title="P-value") +
-  theme_bw()
+  labs(x=NULL, y=NULL, title="P-value")
 
 # Test GLM #
 
