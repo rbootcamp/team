@@ -10,25 +10,22 @@ tcga_case_data<-read_csv("TCGA drug response_Rboot_2.csv")
 tcga_coad<-read_csv("TCGA_COAD_TMM_p400_common_Rboot.csv")
 tcga_read<-read_csv("TCGA_READ_TMM_p400_common_Rboot.csv")
 tcga_coad_read<-merge(tcga_coad,tcga_read,by="gene_id")
-tcga_case_data$measure_of_response
+rm(tcga_coad, tcga_read)
 
 
 ##cataloge according to response
 ## cateogries of response : unique(tcga_case_data$measure_of_response)
-diag<-unique(tcga_case_data$measure_of_response)
+unique(tcga_case_data$measure_of_response)
 
-resp <- tcga_case_data %>% select(Cancer,bcr_patient_barcode, drug_name, measure_of_response)
-
-resp %>%  
+tcga_case_data %>%
+  select(Cancer,bcr_patient_barcode, drug_name, measure_of_response) %>%  
   filter(drug_name=="Fluorouracil") %>%
   tabyl(measure_of_response)
 
-resp_data<-resp %>%  
+FU_resp_data <- tcga_case_data %>% select(Cancer,bcr_patient_barcode, drug_name, measure_of_response) %>%  
   mutate(value=1) %>% 
   distinct() %>% 
-  pivot_wider(names_from = drug_name, values_from = value)
-
-FU_resp_data<-resp_data %>%  
+  pivot_wider(names_from = drug_name, values_from = value) %>%  
   filter(Fluorouracil==1)
 
 patient_id<-colnames(tcga_coad_read)[-1] %>%
@@ -44,47 +41,61 @@ patient_id<-paste0(patient_id[,1],"-", patient_id[,2],"-", patient_id[,3] )
 #   paste0([,1],"-", [,2],"-", [,3] )
 
 #patient ids common between response and expression dataset
-coad_read_patient_id<-unique(intersect(patient_id,FU_resp_data$bcr_patient_barcode))
+coad_read_patient_id<-unique(intersect(patient_id,
+                                       FU_resp_data$bcr_patient_barcode))
 
 
 #remove patient without expression data
-setdiff(FU_resp_data$bcr_patient_barcode,coad_read_patient_id)
+setdiff(FU_resp_data$bcr_patient_barcode,
+        coad_read_patient_id)
 
-FU_resp_data2<-FU_resp_data %>% filter(!bcr_patient_barcode%in%setdiff(FU_resp_data$bcr_patient_barcode,coad_read_patient_id))
+FU_resp_data2<-FU_resp_data %>%
+  filter(!bcr_patient_barcode%in%
+           setdiff(FU_resp_data$bcr_patient_barcode,
+                   coad_read_patient_id))
+
+rm(FU_resp_data)
 
 FU_resp_data2 %>% tabyl(measure_of_response)
 
 colnames(tcga_coad_read)<-c("gene_id",patient_id)
 
-tcga_coad_read_FU<-tcga_coad_read %>% select(c("gene_id", patient_id)) %>%column_to_rownames("gene_id")
+tcga_coad_read_FU_tp<-tcga_coad_read %>%
+  select(c("gene_id", patient_id)) %>%
+  column_to_rownames("gene_id") %>%
+  t() %>%
+  data.frame() %>%
+  rownames_to_column("bcr_patient_barcode")
 
-tcga_coad_read_FU_tp<-tcga_coad_read_FU %>% t() %>% data.frame() %>% rownames_to_column("bcr_patient_barcode")
+rm(patient_id, tcga_coad_read)
 
 
 #Merging gene expression and drug response table
 
 
-FU_resp_data2 %>%dim()
+FU_resp_data2 %>% dim()
 tcga_coad_read_FU_tp %>% dim()
 
-intersect(FU_resp_data2$bcr_patient_barcode,tcga_coad_read_FU_tp$bcr_patient_barcode)
+intersect(FU_resp_data2$bcr_patient_barcode,
+          tcga_coad_read_FU_tp$bcr_patient_barcode)
 
-b <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp)
-b %>% dim()
+comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
+  mutate(response2 = recode(measure_of_response, "Clinical Progressive Disease"= "Nonresponder", 
+                            "Stable Disease" = "Nonresponder", "Complete Response" = "Responder", 
+                            "Partial Response" = "Responder"), .after = measure_of_response)
+
+
+comb %>%  mutate(response3= ifelse(measure_of_response %in% c("Partial Response", "Complete Response"), 
+                                "Responder", 
+                                "Nonresponder"), .after=response2)
+comb %>% dim()
+
+save(comb, file="comb.rda")
+# load("comb.rda")
 
 #Statistical test to identify genes that are differential between responder and non-responder?
 
 
-#mutate
-
-d <- b %>% mutate(response2 = recode(measure_of_response, "Clinical Progressive Disease"= "Nonresponder", 
-                                "Stable Disease" = "Nonresponder", "Complete Response" = "Responder", 
-                                "Partial Response" = "Responder"), .after = measure_of_response)
-
-
-d %>%  mutate(response3= ifelse(measure_of_response %in% c("Partial Response", "Complete Response"), 
-                                "Responder", 
-                                "Nonresponder"), .after=response2) 
 # colnames(d[10:20])
 # 
 # 
@@ -98,9 +109,6 @@ d %>%  mutate(response3= ifelse(measure_of_response %in% c("Partial Response", "
 # ENSG00000000419.p <- wilcox.test(as.numeric(ENSG00000000419) ~ response2, data=d, na.action = na.omit)$p.value
 # 
 
-comb <- d
-
-rm(list=setdiff(ls(), c("FU_resp_data2", "b", "comb") ))
 
 #make dataframe for storing p-values
 
@@ -135,7 +143,7 @@ ggplot(gid, aes(x=p)) +
 
 # Test GLM #
 
-combtest <- b %>% mutate(response4 = recode(measure_of_response, "Clinical Progressive Disease"= 0, 
+combtest <- comb %>% mutate(response4 = recode(measure_of_response, "Clinical Progressive Disease"= 0, 
                                      "Stable Disease" = 0, "Complete Response" = 1, 
                                      "Partial Response" = 1), .after = measure_of_response)
 head(combtest$response4)
