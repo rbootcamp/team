@@ -1,4 +1,4 @@
-setwd("C:/Users/chiasm1/Dropbox/PC/Desktop/R_Bootcamp/capstone")
+setwd("~/capstone")
 pacman::p_load(tidyverse, janitor, readxl, ggplot2)
 rm(list=ls())
 
@@ -30,8 +30,9 @@ resp_data<-resp %>%
 FU_resp_data<-resp_data %>%  
   filter(Fluorouracil==1)
 
-patient_id<-colnames(tcga_coad_read)[-1]
-patient_id<-gsub("\\.", "-", patient_id)
+patient_id<-colnames(tcga_coad_read)[-1] %>%
+  gsub("\\.", "-", .)
+
 patient_id<-str_split_fixed(patient_id, "-", 4)[,-4]
 patient_id<-paste0(patient_id[,1],"-", patient_id[,2],"-", patient_id[,3] )
 
