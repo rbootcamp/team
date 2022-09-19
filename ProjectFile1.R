@@ -18,6 +18,7 @@ tcga_case_data$measure_of_response
 diag<-unique(tcga_case_data$measure_of_response)
 
 resp <- tcga_case_data %>% select(Cancer,bcr_patient_barcode, drug_name, measure_of_response)
+
 resp %>%  
   filter(drug_name=="Fluorouracil") %>%
   tabyl(measure_of_response)
