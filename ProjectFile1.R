@@ -1,7 +1,7 @@
 setwd("~/capstone")
 pacman::p_load(tidyverse, janitor, readxl, ggplot2)
 rm(list=ls())
-
+theme_set( theme_bw() )
 
 
 ##read tgca files
@@ -117,7 +117,6 @@ head(gid)
   
   
 for(i in rownames(gid)){
-  print(i)
   gid[i,"p"] <- wilcox.test(as.numeric(as.matrix(comb[,i])) ~ comb$response2, na.action = na.omit)$p.value
 }
 
