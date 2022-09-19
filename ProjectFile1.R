@@ -99,7 +99,8 @@ d %>%  mutate(response3= ifelse(measure_of_response %in% c("Partial Response", "
 # 
 
 comb <- d
-rm(d)
+
+rm(list=setdiff(ls(), c("FU_resp_data2", "b", "comb") ))
 
 #make dataframe for storing p-values
 
