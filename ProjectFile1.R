@@ -80,14 +80,12 @@ intersect(FU_resp_data2$bcr_patient_barcode,
           tcga_coad_read_FU_tp$bcr_patient_barcode)
 
 comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
-  mutate(response2 = recode(measure_of_response, "Clinical Progressive Disease"= "Nonresponder", 
+  mutate(response_status = recode(measure_of_response, "Clinical Progressive Disease"= "Nonresponder", 
                             "Stable Disease" = "Nonresponder", "Complete Response" = "Responder", 
-                            "Partial Response" = "Responder"), .after = measure_of_response)
+                            "Partial Response" = "Responder"), .after = measure_of_response) %>%
+  mutate(response_binary = ifelse(response_status %in% "Responder", 1, 0 ), .after=response_status)
 
 
-comb %>%  mutate(response3= ifelse(measure_of_response %in% c("Partial Response", "Complete Response"), 
-                                "Responder", 
-                                "Nonresponder"), .after=response2)
 comb %>% dim()
 
 save(comb, file="comb.rda")
@@ -125,7 +123,7 @@ head(gid)
   
   
 for(i in rownames(gid)){
-  gid[i,"p"] <- wilcox.test(as.numeric(as.matrix(comb[,i])) ~ comb$response2, na.action = na.omit)$p.value
+  gid[i,"p"] <- wilcox.test(as.numeric(as.matrix(comb[,i])) ~ comb$response_status, na.action = na.omit)$p.value
 }
 
 save(gid, file="gid.rda")
@@ -143,9 +141,6 @@ ggplot(gid, aes(x=p)) +
 
 # Test GLM #
 
-combtest <- comb %>% mutate(response4 = recode(measure_of_response, "Clinical Progressive Disease"= 0, 
-                                     "Stable Disease" = 0, "Complete Response" = 1, 
-                                     "Partial Response" = 1), .after = measure_of_response)
-head(combtest$response4)
-fit <- glm(response4~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = combtest, family = "binomial")
+head(comb$response_binary)
+fit <- glm(response_binary~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = combtest, family = "binomial")
 summary(fit)
