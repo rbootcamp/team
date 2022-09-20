@@ -142,5 +142,5 @@ ggplot(gid, aes(x=p)) +
 # Test GLM #
 
 head(comb$response_binary)
-fit <- glm(response_binary~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = combtest, family = "binomial")
+fit <- glm(response_binary~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = comb, family = "binomial")
 summary(fit)
