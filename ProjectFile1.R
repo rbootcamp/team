@@ -161,13 +161,14 @@ v <- comb %>%
   var(use="pairwise.complete.obs") %>% 
   diag()
 
-save(v, file="vector_table.rda")
+save(v, file="variance_table.rda")
 
 #names of columns with non-zero variance
 keep <- which(v!=0) %>%
   names()
 
-v <- data.frame(v)
+gene_var <- data.frame(v)
+rm(v)
 
 #PCA (RAW DATA)
 pc <- prcomp(comb %>% select(all_of(keep)),
@@ -193,5 +194,5 @@ summary(fit)
 
 
 
-# x <- c("comb", "nrm", "pval", "gid", "v", "cal_log2fc")
+# x <- c("comb", "nrm", "pval", "gid", "gene_var", "cal_log2fc")
 # rm(list=setdiff(ls(), x))
