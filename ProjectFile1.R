@@ -80,10 +80,10 @@ intersect(FU_resp_data2$bcr_patient_barcode,
           tcga_coad_read_FU_tp$bcr_patient_barcode)
 
 comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
-  mutate(response_status = recode(measure_of_response, "Clinical Progressive Disease"= "Nonresponder", 
-                            "Stable Disease" = "Nonresponder", "Complete Response" = "Responder", 
-                            "Partial Response" = "Responder"), .after = measure_of_response) %>%
-  mutate(response_binary = ifelse(response_status %in% "Responder", 1, 0 ), .after=response_status)
+  mutate(response_status = ifelse(measure_of_response %in% c("Partial Response", "Complete Response"),
+                                  "Responder", "Nonresponder"), .after = measure_of_response) %>%
+  mutate(response_binary = recode(response_status,
+                                  "Responder" = 1, "Nonresponder" = 0), .after = response_status)
 
 
 comb %>% dim()
