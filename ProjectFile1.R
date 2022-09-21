@@ -1,11 +1,10 @@
 setwd("~/capstone")
-pacman::p_load(tidyverse, janitor, readxl, ggplot2)
+pacman::p_load(tidyverse, janitor, readxl, ggfortify, ggrepel)
 rm(list=ls())
 theme_set( theme_bw() )
 
 
-##read tgca files
-
+##read tgca files ####
 tcga_case_data<-read_csv("TCGA drug response_Rboot_2.csv")
 tcga_coad<-read_csv("TCGA_COAD_TMM_p400_common_Rboot.csv")
 tcga_read<-read_csv("TCGA_READ_TMM_p400_common_Rboot.csv")
@@ -13,7 +12,7 @@ tcga_coad_read<-merge(tcga_coad,tcga_read,by="gene_id")
 rm(tcga_coad, tcga_read)
 
 
-##cataloge according to response
+##cataloge according to response ####
 ## cateogries of response : unique(tcga_case_data$measure_of_response)
 unique(tcga_case_data$measure_of_response)
 
@@ -79,17 +78,60 @@ tcga_coad_read_FU_tp %>% dim()
 intersect(FU_resp_data2$bcr_patient_barcode,
           tcga_coad_read_FU_tp$bcr_patient_barcode)
 
+
+
+
+# load("comb.rda")
+
 comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
   mutate(response_status = ifelse(measure_of_response %in% c("Partial Response", "Complete Response"),
                                   "Responder", "Nonresponder"), .after = measure_of_response) %>%
   mutate(response_binary = recode(response_status,
                                   "Responder" = 1, "Nonresponder" = 0), .after = response_status)
 
-
 comb %>% dim()
 
 save(comb, file="comb.rda")
-# load("comb.rda")
+
+#make dataframe for storing p-values
+
+gid <- comb %>%
+  select(starts_with("ENSG")) %>%
+  colnames() %>%
+  data.frame(gene=.) %>% 
+  add_column(p=NA) %>% 
+  column_to_rownames('gene')
+head(gid)
+
+
+# x <- comb$ENSG00000119396
+# 
+# q <- cal_log2fc(x)
+# 
+# hist(q)
+# 
+# i <- rownames(gid)[10]
+
+
+# NORMALISATION FUNCTION #
+
+cal_log2fc <- function(df) {
+  lg <- log2(df+1)
+  med <- log2(median(df+1))
+  output <- lg-med
+  return(output)
+}
+
+# FOR LOOP FOR NORMALISATION #
+
+nrm <- comb
+
+for(i in rownames(gid)){
+  nrm[,i] <- comb %>%
+    pull(i) %>%
+    cal_log2fc()
+}
+
 
 #Statistical test to identify genes that are differential between responder and non-responder?
 
@@ -108,28 +150,30 @@ save(comb, file="comb.rda")
 # 
 
 
-#make dataframe for storing p-values
-
-gid <- comb %>%
-  select(starts_with("ENSG")) %>%
-  colnames() %>%
-  data.frame(gene=.) %>% 
-  add_column(p=NA) %>% 
-  column_to_rownames('gene')
-head(gid)
-
-
 # FOR LOOP FOR WILCOX-TEST #
-  
-  
+
+load("gid.rda")
+
 for(i in rownames(gid)){
   gid[i,"p"] <- wilcox.test(as.numeric(as.matrix(comb[,i])) ~ comb$response_status, na.action = na.omit)$p.value
 }
 
 save(gid, file="gid.rda")
-#load("gid.rda")
 
-# Data exploration #
+
+
+
+
+
+# Data exploration and Visualisation ####
+
+pc <- prcomp(comb %>% select(starts_with("ENSG")),
+             scale = TRUE)
+
+summary(pc)
+
+autoplot(pc, data=comb, col="response_status", size=5) +
+  theme_bw(base_size=24)
 
 min(gid$p, na.rm= TRUE)
 
