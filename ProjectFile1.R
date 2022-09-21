@@ -99,8 +99,12 @@ cal_log2fc <- function(df) {
 }
 # FOR LOOP FOR NORMALISATION ####
 
-# ap <- sapply(comb[,rownames(gid)], function(x) cal_log2fc(x) )
-# ap <- sapply(comb[,rownames(gid)], cal_log2fc )
+# ap <- sapply(comb[,gid], function(x) cal_log2fc(x) )
+# ap <- sapply(comb[,gid], cal_log2fc )
+
+nrm2 <- comb
+ap <- sapply(comb[,gid], cal_log2fc )
+nrm2[,gid] <- ap
 
 nrm <- comb
 # load("nrm.rda")
