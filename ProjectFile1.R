@@ -51,7 +51,7 @@ FU_resp_data2<-FU_resp_data %>%
            setdiff(FU_resp_data$bcr_patient_barcode,
                    coad_read_patient_id))
 
-rm(FU_resp_data)
+rm(tcga_case_data, FU_resp_data)
 
 FU_resp_data2 %>% tabyl(measure_of_response)
 
@@ -108,7 +108,7 @@ ap <- sapply(comb[,gid], cal_log2fc )
 nrm2[,gid] <- ap
 
 # nrm <- nrm2
-# rm(nrm2)
+# rm(ap, nrm2)
 # save(nrm, file="nrm.rda")
 
 nrm <- comb
