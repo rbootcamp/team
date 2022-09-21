@@ -4,14 +4,14 @@ rm(list=ls())
 theme_set( theme_bw() )
 
 
-# read tgca files ####
+#Read TGCA files ####
 tcga_case_data<-read_csv("TCGA drug response_Rboot_2.csv")
 tcga_coad<-read_csv("TCGA_COAD_TMM_p400_common_Rboot.csv")
 tcga_read<-read_csv("TCGA_READ_TMM_p400_common_Rboot.csv")
 tcga_coad_read<-merge(tcga_coad,tcga_read,by="gene_id")
 rm(tcga_coad, tcga_read)
 
-#cataloge according to response ####
+#Catalogue according to response ####
 #cateogries of response : unique(tcga_case_data$measure_of_response)
 unique(tcga_case_data$measure_of_response)
 
@@ -38,11 +38,11 @@ patient_id<-paste0(patient_id[,1],"-", patient_id[,2],"-", patient_id[,3] )
 #   str_split_fixed(., "-", 4)[,-4]%>% 
 #   paste0([,1],"-", [,2],"-", [,3] )
 
-#patient ids common between response and expression dataset ####
+#Patient ids common between response and expression dataset ####
 coad_read_patient_id<-unique(intersect(patient_id,
                                        FU_resp_data$bcr_patient_barcode))
 
-#remove patient without expression data ####
+#Remove patient without expression data ####
 setdiff(FU_resp_data$bcr_patient_barcode,
         coad_read_patient_id)
 
@@ -64,9 +64,9 @@ tcga_coad_read_FU_tp<-tcga_coad_read %>%
   data.frame() %>%
   rownames_to_column("bcr_patient_barcode")
 
-rm(patient_id, tcga_coad_read)
+rm(patient_id, tcga_coad_read, coad_read_patient_id)
 
-# Merging gene expression and drug response table ####
+#Merging gene expression and drug response table ####
 
 FU_resp_data2 %>% dim()
 tcga_coad_read_FU_tp %>% dim()
@@ -84,8 +84,9 @@ comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
 comb %>% dim()
 
 save(comb, file="comb.rda")
+rm(FU_resp_data2, tcga_coad_read_FU_tp)
 
-# make vector of gene IDs
+#make vector of gene IDs
 gid <- comb %>%
   select(starts_with("ENSG")) %>%
   colnames()
@@ -97,7 +98,7 @@ cal_log2fc <- function(df) {
   output <- lg-med
   return(output)
 }
-# FOR LOOP FOR NORMALISATION ####
+#FOR LOOP FOR NORMALISATION ####
 
 # ap <- sapply(comb[,gid], function(x) cal_log2fc(x) )
 # ap <- sapply(comb[,gid], cal_log2fc )
@@ -105,6 +106,10 @@ cal_log2fc <- function(df) {
 nrm2 <- comb
 ap <- sapply(comb[,gid], cal_log2fc )
 nrm2[,gid] <- ap
+
+# nrm <- nrm2
+# rm(nrm2)
+# save(nrm, file="nrm.rda")
 
 nrm <- comb
 # load("nrm.rda")
@@ -117,7 +122,7 @@ for(i in gid){
 
 save(nrm, file="nrm.rda")
 
-# FOR LOOP FOR WILCOX-TEST ####
+#FOR LOOP FOR WILCOX-TEST ####
 
 #make dataframe for storing p-values
 pval <- gid %>%
@@ -129,13 +134,14 @@ head(pval)
 # Wilcox-test
 # load("pval.rda")
 
-for(i in rownames(pval)){
-  pval[i,"p"] <- wilcox.test(as.numeric(as.matrix(nrm[,i])) ~ nrm$response_status, na.action = na.omit)$p.value
+for(i in gid){
+  pval[i,"p"] <- wilcox.test(as.numeric(as.matrix(nrm[,i])) ~ nrm$response_status,
+                             na.action = na.omit)$p.value
 }
 
 save(pval, file="pval.rda")
 
-# Data exploration and Visualisation ####
+#Data exploration and Visualisation ####
 
 min(pval$p, na.rm= TRUE)
 
@@ -161,6 +167,8 @@ save(v, file="vector_table.rda")
 keep <- which(v!=0) %>%
   names()
 
+v <- data.frame(v)
+
 #PCA (RAW DATA)
 pc <- prcomp(comb %>% select(all_of(keep)),
              scale = TRUE)
@@ -182,3 +190,8 @@ autoplot(pc_nrm, data=nrm, col="response_status")
 head(comb$response_binary)
 fit <- glm(response_binary~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = comb, family = "binomial")
 summary(fit)
+
+
+
+# x <- c("comb", "nrm", "pval", "gid", "v", "cal_log2fc")
+# rm(list=setdiff(ls(), x))
