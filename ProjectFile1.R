@@ -4,16 +4,15 @@ rm(list=ls())
 theme_set( theme_bw() )
 
 
-##read tgca files ####
+# read tgca files ####
 tcga_case_data<-read_csv("TCGA drug response_Rboot_2.csv")
 tcga_coad<-read_csv("TCGA_COAD_TMM_p400_common_Rboot.csv")
 tcga_read<-read_csv("TCGA_READ_TMM_p400_common_Rboot.csv")
 tcga_coad_read<-merge(tcga_coad,tcga_read,by="gene_id")
 rm(tcga_coad, tcga_read)
 
-
-##cataloge according to response ####
-## cateogries of response : unique(tcga_case_data$measure_of_response)
+#cataloge according to response ####
+#cateogries of response : unique(tcga_case_data$measure_of_response)
 unique(tcga_case_data$measure_of_response)
 
 tcga_case_data %>%
@@ -39,12 +38,11 @@ patient_id<-paste0(patient_id[,1],"-", patient_id[,2],"-", patient_id[,3] )
 #   str_split_fixed(., "-", 4)[,-4]%>% 
 #   paste0([,1],"-", [,2],"-", [,3] )
 
-#patient ids common between response and expression dataset
+#patient ids common between response and expression dataset ####
 coad_read_patient_id<-unique(intersect(patient_id,
                                        FU_resp_data$bcr_patient_barcode))
 
-
-#remove patient without expression data
+#remove patient without expression data ####
 setdiff(FU_resp_data$bcr_patient_barcode,
         coad_read_patient_id)
 
@@ -68,18 +66,13 @@ tcga_coad_read_FU_tp<-tcga_coad_read %>%
 
 rm(patient_id, tcga_coad_read)
 
-
-#Merging gene expression and drug response table
-
+# Merging gene expression and drug response table ####
 
 FU_resp_data2 %>% dim()
 tcga_coad_read_FU_tp %>% dim()
 
 intersect(FU_resp_data2$bcr_patient_barcode,
           tcga_coad_read_FU_tp$bcr_patient_barcode)
-
-
-
 
 # load("comb.rda")
 
@@ -88,100 +81,97 @@ comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
                                   "Responder", "Nonresponder"), .after = measure_of_response) %>%
   mutate(response_binary = recode(response_status,
                                   "Responder" = 1, "Nonresponder" = 0), .after = response_status)
-
 comb %>% dim()
 
 save(comb, file="comb.rda")
 
-#make dataframe for storing p-values
-
+# make vector of gene IDs
 gid <- comb %>%
   select(starts_with("ENSG")) %>%
-  colnames() %>%
-  data.frame(gene=.) %>% 
-  add_column(p=NA) %>% 
-  column_to_rownames('gene')
-head(gid)
+  colnames()
 
-
-# x <- comb$ENSG00000119396
-# 
-# q <- cal_log2fc(x)
-# 
-# hist(q)
-# 
-# i <- rownames(gid)[10]
-
-
-# NORMALISATION FUNCTION #
-
+#NORMALISATION FUNCTION#
 cal_log2fc <- function(df) {
   lg <- log2(df+1)
   med <- log2(median(df+1))
   output <- lg-med
   return(output)
 }
+# FOR LOOP FOR NORMALISATION ####
 
-# FOR LOOP FOR NORMALISATION #
+# ap <- sapply(comb[,rownames(gid)], function(x) cal_log2fc(x) )
+# ap <- sapply(comb[,rownames(gid)], cal_log2fc )
 
 nrm <- comb
+# load("nrm.rda")
 
-for(i in rownames(gid)){
+for(i in gid){
   nrm[,i] <- comb %>%
     pull(i) %>%
     cal_log2fc()
 }
 
+save(nrm, file="nrm.rda")
 
-#Statistical test to identify genes that are differential between responder and non-responder?
+# FOR LOOP FOR WILCOX-TEST ####
 
+#make dataframe for storing p-values
+pval <- gid %>%
+  data.frame(gene=.) %>% 
+  add_column(p=NA) %>% 
+  column_to_rownames('gene')
+head(pval)
 
-# colnames(d[10:20])
-# 
-# 
-# is.na(d)
-# 
-# getOption("na.action")
-# 
-# wilcox.test(as.numeric(ENSG00000000419) ~ response2, data=d, na.action = na.omit) %>% names()
-# 
-# 
-# ENSG00000000419.p <- wilcox.test(as.numeric(ENSG00000000419) ~ response2, data=d, na.action = na.omit)$p.value
-# 
+# Wilcox-test
+# load("pval.rda")
 
-
-# FOR LOOP FOR WILCOX-TEST #
-
-load("gid.rda")
-
-for(i in rownames(gid)){
-  gid[i,"p"] <- wilcox.test(as.numeric(as.matrix(comb[,i])) ~ comb$response_status, na.action = na.omit)$p.value
+for(i in gid){
+  pval[i,"p"] <- wilcox.test(as.numeric(as.matrix(nrm[,i])) ~ nrm$response_status, na.action = na.omit)$p.value
 }
 
-save(gid, file="gid.rda")
-
-
-
-
-
+save(pval, file="pval.rda")
 
 # Data exploration and Visualisation ####
 
-pc <- prcomp(comb %>% select(starts_with("ENSG")),
+min(pval$p, na.rm= TRUE)
+
+pval %>% filter(p < 0.05/54098)
+
+ggplot(pval, aes(x=p)) +
+  geom_histogram(alpha=0.4) +
+  labs(x=NULL, y=NULL, title="P-value")
+
+
+# PRINCIPAL COMPONENT ANALYSIS #
+
+# calculate variance of each column in expression data
+# load("vector_table.rda")
+v <- comb %>%
+  select(all_of(gid)) %>% 
+  var(use="pairwise.complete.obs") %>% 
+  diag()
+
+save(v, file="vector_table.rda")
+
+#names of columns with non-zero variance
+keep <- which(v!=0) %>%
+  names()
+
+#PCA (RAW DATA)
+pc <- prcomp(comb %>% select(all_of(keep)),
              scale = TRUE)
 
 summary(pc)
 
-autoplot(pc, data=comb, col="response_status", size=5) +
-  theme_bw(base_size=24)
+autoplot(pc, data=comb, col="response_status")
 
-min(gid$p, na.rm= TRUE)
+#PCA (NORMALISED DATA)
+pc_nrm <- prcomp(nrm %>% select(all_of(keep)),
+                 scale = TRUE)
 
-gid %>% filter(p < 0.05/54098)
+summary(pc_nrm)
 
-ggplot(gid, aes(x=p)) +
-  geom_histogram(alpha=0.4) +
-  labs(x=NULL, y=NULL, title="P-value")
+autoplot(pc_nrm, data=nrm, col="response_status")
 
 # Test GLM #
 
