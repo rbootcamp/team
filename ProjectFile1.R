@@ -12,7 +12,7 @@ tcga_coad_read<-merge(tcga_coad,tcga_read,by="gene_id")
 rm(tcga_coad, tcga_read)
 
 #cataloge according to response ####
-# cateogries of response : unique(tcga_case_data$measure_of_response)
+#cateogries of response : unique(tcga_case_data$measure_of_response)
 unique(tcga_case_data$measure_of_response)
 
 tcga_case_data %>%
@@ -101,12 +101,18 @@ cal_log2fc <- function(df) {
 
 # ap <- sapply(comb[,rownames(gid)], function(x) cal_log2fc(x) )
 # ap <- sapply(comb[,rownames(gid)], cal_log2fc )
+
 nrm <- comb
-for(i in rownames(gid)){
+# load("nrm.rda")
+
+for(i in gid){
   nrm[,i] <- comb %>%
     pull(i) %>%
     cal_log2fc()
 }
+
+save(nrm, file="nrm.rda")
+
 # FOR LOOP FOR WILCOX-TEST ####
 
 #make dataframe for storing p-values
@@ -135,12 +141,17 @@ ggplot(pval, aes(x=p)) +
   geom_histogram(alpha=0.4) +
   labs(x=NULL, y=NULL, title="P-value")
 
-# PRINCIPAL COMPONENT ANALYSIS
-#calculate variance of each column in expression data
+
+# PRINCIPAL COMPONENT ANALYSIS #
+
+# calculate variance of each column in expression data
+# load("vector_table.rda")
 v <- comb %>%
   select(all_of(gid)) %>% 
   var(use="pairwise.complete.obs") %>% 
   diag()
+
+save(v, file="vector_table.rda")
 
 #names of columns with non-zero variance
 keep <- which(v!=0) %>%
