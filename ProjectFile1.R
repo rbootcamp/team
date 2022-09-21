@@ -125,7 +125,7 @@ head(pval)
 # Wilcox-test
 # load("pval.rda")
 
-for(i in gid){
+for(i in rownames(pval)){
   pval[i,"p"] <- wilcox.test(as.numeric(as.matrix(nrm[,i])) ~ nrm$response_status, na.action = na.omit)$p.value
 }
 
