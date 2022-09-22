@@ -155,7 +155,7 @@ ggplot(pval, aes(x=p)) +
 # PRINCIPAL COMPONENT ANALYSIS #
 
 # calculate variance of each column in expression data
-# load("vector_table.rda")
+# load("variance_table.rda")
 v <- comb %>%
   select(all_of(gid)) %>% 
   var(use="pairwise.complete.obs") %>% 
