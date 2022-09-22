@@ -167,7 +167,7 @@ save(v, file="variance_table.rda")
 keep <- which(v!=0) %>%
   names()
 
-gene_var <- data.frame(v)
+gene_var <- data.frame(variance=v)
 rm(v)
 
 #PCA (RAW DATA)
