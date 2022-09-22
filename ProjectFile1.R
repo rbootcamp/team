@@ -103,12 +103,12 @@ cal_log2fc <- function(df) {
 # ap <- sapply(comb[,gid], function(x) cal_log2fc(x) )
 # ap <- sapply(comb[,gid], cal_log2fc )
 
+#sapply method (faster)
 nrm2 <- comb
-ap <- sapply(comb[,gid], cal_log2fc )
-nrm2[,gid] <- ap
+nrm2[,gid] <- sapply(comb[,gid], cal_log2fc )
 
 # nrm <- nrm2
-# rm(ap, nrm2)
+# rm(nrm2)
 # save(nrm, file="nrm.rda")
 
 nrm <- comb
