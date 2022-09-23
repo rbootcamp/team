@@ -1,19 +1,18 @@
 setwd("~/capstone")
 pacman::p_load(tidyverse, janitor, readxl, ggfortify, ggrepel)
-rm(list=ls())
+rm(list=setdiff(ls(),'v'))
 theme_set( theme_bw() )
 
 
-##read tgca files ####
+#Read TGCA files ####
 tcga_case_data<-read_csv("TCGA drug response_Rboot_2.csv")
 tcga_coad<-read_csv("TCGA_COAD_TMM_p400_common_Rboot.csv")
 tcga_read<-read_csv("TCGA_READ_TMM_p400_common_Rboot.csv")
 tcga_coad_read<-merge(tcga_coad,tcga_read,by="gene_id")
 rm(tcga_coad, tcga_read)
 
-
-##cataloge according to response ####
-## cateogries of response : unique(tcga_case_data$measure_of_response)
+#Catalogue according to response ####
+#cateogries of response : unique(tcga_case_data$measure_of_response)
 unique(tcga_case_data$measure_of_response)
 
 tcga_case_data %>%
@@ -39,12 +38,11 @@ patient_id<-paste0(patient_id[,1],"-", patient_id[,2],"-", patient_id[,3] )
 #   str_split_fixed(., "-", 4)[,-4]%>% 
 #   paste0([,1],"-", [,2],"-", [,3] )
 
-#patient ids common between response and expression dataset
+#Patient ids common between response and expression dataset ####
 coad_read_patient_id<-unique(intersect(patient_id,
                                        FU_resp_data$bcr_patient_barcode))
 
-
-#remove patient without expression data
+#Remove patient without expression data ####
 setdiff(FU_resp_data$bcr_patient_barcode,
         coad_read_patient_id)
 
@@ -53,7 +51,7 @@ FU_resp_data2<-FU_resp_data %>%
            setdiff(FU_resp_data$bcr_patient_barcode,
                    coad_read_patient_id))
 
-rm(FU_resp_data)
+rm(tcga_case_data, FU_resp_data)
 
 FU_resp_data2 %>% tabyl(measure_of_response)
 
@@ -66,11 +64,9 @@ tcga_coad_read_FU_tp<-tcga_coad_read %>%
   data.frame() %>%
   rownames_to_column("bcr_patient_barcode")
 
-rm(patient_id, tcga_coad_read)
+rm(patient_id, tcga_coad_read, coad_read_patient_id)
 
-
-#Merging gene expression and drug response table
-
+#Merging gene expression and drug response table ####
 
 FU_resp_data2 %>% dim()
 tcga_coad_read_FU_tp %>% dim()
@@ -78,113 +74,122 @@ tcga_coad_read_FU_tp %>% dim()
 intersect(FU_resp_data2$bcr_patient_barcode,
           tcga_coad_read_FU_tp$bcr_patient_barcode)
 
-
-
-
-# load("comb.rda")
-
 comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
   mutate(response_status = ifelse(measure_of_response %in% c("Partial Response", "Complete Response"),
                                   "Responder", "Nonresponder"), .after = measure_of_response) %>%
   mutate(response_binary = recode(response_status,
                                   "Responder" = 1, "Nonresponder" = 0), .after = response_status)
 
+rm(FU_resp_data2, tcga_coad_read_FU_tp)
+
+#Calculate variance of each column in expression data####
+# load("variance.rda")
+v <- comb %>%
+  select(starts_with("ENSG")) %>%
+  var(use="pairwise.complete.obs") %>%
+  diag()
+
+save(v, file="variance.rda")
+
+#list of genes with zero variance
+discard <- which(v==0) %>%
+  names()
+discard %>% length()
+
+write.csv(discard, file="discarded_genes.csv")
+
+#Remove genes with zero variance####
+# load("comb.rda")
+comb <- comb %>% select(-discard)
+
 comb %>% dim()
 
 save(comb, file="comb.rda")
 
-#make dataframe for storing p-values
+rm(discard)
 
+#make vector of gene IDs
 gid <- comb %>%
   select(starts_with("ENSG")) %>%
-  colnames() %>%
-  data.frame(gene=.) %>% 
-  add_column(p=NA) %>% 
-  column_to_rownames('gene')
-head(gid)
+  colnames()
 
-
-# x <- comb$ENSG00000119396
-# 
-# q <- cal_log2fc(x)
-# 
-# hist(q)
-# 
-# i <- rownames(gid)[10]
-
-
-# NORMALISATION FUNCTION #
-
+#NORMALISATION FUNCTION#
 cal_log2fc <- function(df) {
   lg <- log2(df+1)
   med <- log2(median(df+1))
   output <- lg-med
   return(output)
 }
+#FOR LOOP FOR NORMALISATION ####
+# load("nrm.rda")
 
-# FOR LOOP FOR NORMALISATION #
+# ap <- sapply(comb[,gid], function(x) cal_log2fc(x) )
+# ap <- sapply(comb[,gid], cal_log2fc )
 
 nrm <- comb
 
-for(i in rownames(gid)){
-  nrm[,i] <- comb %>%
-    pull(i) %>%
-    cal_log2fc()
+#sapply method (faster)
+nrm[,gid] <- sapply(comb[,gid], cal_log2fc )
+save(nrm, file="nrm.rda")
+
+# #for loop method...
+# for(i in gid){
+#   nrm[,i] <- comb %>%
+#     pull(i) %>%
+#     cal_log2fc()
+# }
+# save(nrm, file="nrm.rda")
+
+#FOR LOOP FOR WILCOX-TEST ####
+# load("pval.rda")
+
+#make dataframe for storing p-values
+pval <- gid %>%
+  data.frame(gene=.) %>% 
+  add_column(p=NA) %>% 
+  column_to_rownames('gene')
+head(pval)
+
+# Wilcox-test
+for(i in gid){
+  pval[i,"p"] <- wilcox.test(as.numeric(as.matrix(nrm[,i])) ~
+                               nrm$response_status,
+                               na.action = na.omit)$p.value
 }
 
+save(pval, file="pval.rda")
 
-#Statistical test to identify genes that are differential between responder and non-responder?
+#Data exploration and Visualisation ####
 
+min(pval$p, na.rm= TRUE) %>% print()
 
-# colnames(d[10:20])
-# 
-# 
-# is.na(d)
-# 
-# getOption("na.action")
-# 
-# wilcox.test(as.numeric(ENSG00000000419) ~ response2, data=d, na.action = na.omit) %>% names()
-# 
-# 
-# ENSG00000000419.p <- wilcox.test(as.numeric(ENSG00000000419) ~ response2, data=d, na.action = na.omit)$p.value
-# 
+pval %>% filter(p < 0.05/54098) %>% print()
+
+ggplot(pval, aes(x=p)) +
+  geom_histogram(alpha=0.4) +
+  labs(x=NULL, y=NULL, title="P-value")
 
 
-# FOR LOOP FOR WILCOX-TEST #
+# PRINCIPAL COMPONENT ANALYSIS #
 
-load("gid.rda")
-
-for(i in rownames(gid)){
-  gid[i,"p"] <- wilcox.test(as.numeric(as.matrix(comb[,i])) ~ comb$response_status, na.action = na.omit)$p.value
-}
-
-save(gid, file="gid.rda")
-
-
-
-
-
-
-# Data exploration and Visualisation ####
-
-pc <- prcomp(comb %>% select(starts_with("ENSG")),
+#PCA (RAW DATA)
+pc <- prcomp(comb %>% select(all_of(gid)),
              scale = TRUE)
 
 summary(pc)
 
-autoplot(pc, data=comb, col="response_status", size=5) +
-  theme_bw(base_size=24)
+autoplot(pc, data=comb, col="response_status")
 
-min(gid$p, na.rm= TRUE)
+#PCA (NORMALISED DATA)
+pc_nrm <- prcomp(nrm %>% select(all_of(gid)),
+                 scale = TRUE)
 
-gid %>% filter(p < 0.05/54098)
+summary(pc_nrm)
 
-ggplot(gid, aes(x=p)) +
-  geom_histogram(alpha=0.4) +
-  labs(x=NULL, y=NULL, title="P-value")
+autoplot(pc_nrm, data=nrm, col="response_status")
 
 # Test GLM #
 
-head(comb$response_binary)
-fit <- glm(response_binary~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = comb, family = "binomial")
+head(nrm$response_binary)
+fit <- glm(response_binary~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = nrm, family = "binomial")
 summary(fit)
