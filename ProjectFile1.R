@@ -81,10 +81,28 @@ comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
                                   "Responder", "Nonresponder"), .after = measure_of_response) %>%
   mutate(response_binary = recode(response_status,
                                   "Responder" = 1, "Nonresponder" = 0), .after = response_status)
+
+# Calculate variance of each column in expression data####
+# load("variance_table.rda")
+v <- comb %>%
+  select(all_of(gid)) %>%
+  var(use="pairwise.complete.obs") %>%
+  diag()
+
+save(v, file="variance_table.rda")
+
+#list of genes with zero variance
+discard <- which(v==0) %>%
+  names()
+discard %>% length()
+
+#remove genes with zero variance
+comb <- comb %>% select(-discard)
+
 comb %>% dim()
 
 save(comb, file="comb.rda")
-rm(FU_resp_data2, tcga_coad_read_FU_tp)
+rm(FU_resp_data2, tcga_coad_read_FU_tp, discard)
 
 #make vector of gene IDs
 gid <- comb %>%
@@ -150,21 +168,8 @@ ggplot(pval, aes(x=p)) +
 
 # PRINCIPAL COMPONENT ANALYSIS #
 
-# calculate variance of each column in expression data
-# load("variance_table.rda")
-v <- comb %>%
-  select(all_of(gid)) %>%
-  var(use="pairwise.complete.obs") %>%
-  diag()
-
-save(v, file="variance_table.rda")
-
-#list of genes with non-zero variance
-keep <- which(v!=0) %>%
-  names()
-
 #PCA (RAW DATA)
-pc <- prcomp(comb %>% select(all_of(keep)),
+pc <- prcomp(comb %>% select(all_of(gid)),
              scale = TRUE)
 
 summary(pc)
@@ -172,7 +177,7 @@ summary(pc)
 autoplot(pc, data=comb, col="response_status")
 
 #PCA (NORMALISED DATA)
-pc_nrm <- prcomp(nrm %>% select(all_of(keep)),
+pc_nrm <- prcomp(nrm %>% select(all_of(gid)),
                  scale = TRUE)
 
 summary(pc_nrm)
