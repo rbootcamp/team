@@ -80,19 +80,23 @@ comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
   mutate(response_binary = recode(response_status,
                                   "Responder" = 1, "Nonresponder" = 0), .after = response_status)
 
+rm(FU_resp_data2, tcga_coad_read_FU_tp)
+
 #Calculate variance of each column in expression data####
 # load("variance_table.rda")
 v <- comb %>%
-  select(all_of(gid)) %>%
+  select(starts_with("ENSG")) %>%
   var(use="pairwise.complete.obs") %>%
   diag()
 
-save(v, file="variance_table.rda")
+save(v, file="variances.rda")
 
 #list of genes with zero variance
 discard <- which(v==0) %>%
   names()
 discard %>% length()
+
+save(discard, file="discarded_genes.csv")
 
 #Remove genes with zero variance####
 # load("comb.rda")
@@ -101,7 +105,8 @@ comb <- comb %>% select(-discard)
 comb %>% dim()
 
 save(comb, file="comb.rda")
-rm(FU_resp_data2, tcga_coad_read_FU_tp, discard)
+
+rm(discard)
 
 #make vector of gene IDs
 gid <- comb %>%
