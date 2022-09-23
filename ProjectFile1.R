@@ -83,13 +83,13 @@ comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
 rm(FU_resp_data2, tcga_coad_read_FU_tp)
 
 #Calculate variance of each column in expression data####
-# load("variances.rda")
+# load("variance.rda")
 v <- comb %>%
   select(starts_with("ENSG")) %>%
   var(use="pairwise.complete.obs") %>%
   diag()
 
-save(v, file="variances.rda")
+save(v, file="variance.rda")
 
 #list of genes with zero variance
 discard <- which(v==0) %>%
