@@ -132,13 +132,13 @@ nrm <- comb
 nrm[,gid] <- sapply(comb[,gid], cal_log2fc )
 save(nrm, file="nrm.rda")
 
-#for loop method...
-for(i in gid){
-  nrm[,i] <- comb %>%
-    pull(i) %>%
-    cal_log2fc()
-}
-save(nrm, file="nrm.rda")
+# #for loop method...
+# for(i in gid){
+#   nrm[,i] <- comb %>%
+#     pull(i) %>%
+#     cal_log2fc()
+# }
+# save(nrm, file="nrm.rda")
 
 #FOR LOOP FOR WILCOX-TEST ####
 # load("pval.rda")
@@ -161,9 +161,9 @@ save(pval, file="pval.rda")
 
 #Data exploration and Visualisation ####
 
-min(pval$p, na.rm= TRUE)
+min(pval$p, na.rm= TRUE) %>% print()
 
-pval %>% filter(p < 0.05/54098)
+pval %>% filter(p < 0.05/54098) %>% print()
 
 ggplot(pval, aes(x=p)) +
   geom_histogram(alpha=0.4) +
@@ -190,6 +190,6 @@ autoplot(pc_nrm, data=nrm, col="response_status")
 
 # Test GLM #
 
-head(comb$response_binary)
-fit <- glm(response_binary~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = comb, family = "binomial")
+head(nrm$response_binary)
+fit <- glm(response_binary~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = nrm, family = "binomial")
 summary(fit)
