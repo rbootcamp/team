@@ -74,15 +74,13 @@ tcga_coad_read_FU_tp %>% dim()
 intersect(FU_resp_data2$bcr_patient_barcode,
           tcga_coad_read_FU_tp$bcr_patient_barcode)
 
-# load("comb.rda")
-
 comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
   mutate(response_status = ifelse(measure_of_response %in% c("Partial Response", "Complete Response"),
                                   "Responder", "Nonresponder"), .after = measure_of_response) %>%
   mutate(response_binary = recode(response_status,
                                   "Responder" = 1, "Nonresponder" = 0), .after = response_status)
 
-# Calculate variance of each column in expression data####
+#Calculate variance of each column in expression data####
 # load("variance_table.rda")
 v <- comb %>%
   select(all_of(gid)) %>%
@@ -96,7 +94,8 @@ discard <- which(v==0) %>%
   names()
 discard %>% length()
 
-#remove genes with zero variance
+#Remove genes with zero variance####
+# load("comb.rda")
 comb <- comb %>% select(-discard)
 
 comb %>% dim()
