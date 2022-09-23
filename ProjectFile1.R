@@ -1,6 +1,6 @@
 setwd("~/capstone")
 pacman::p_load(tidyverse, janitor, readxl, ggfortify, ggrepel)
-rm(list=ls())
+rm(list=setdiff(ls(),'v'))
 theme_set( theme_bw() )
 
 
@@ -99,30 +99,27 @@ cal_log2fc <- function(df) {
   return(output)
 }
 #FOR LOOP FOR NORMALISATION ####
+# load("nrm.rda")
 
 # ap <- sapply(comb[,gid], function(x) cal_log2fc(x) )
 # ap <- sapply(comb[,gid], cal_log2fc )
 
-#sapply method (faster)
-nrm2 <- comb
-nrm2[,gid] <- sapply(comb[,gid], cal_log2fc )
-
-# nrm <- nrm2
-# rm(nrm2)
-# save(nrm, file="nrm.rda")
-
 nrm <- comb
-# load("nrm.rda")
 
+#sapply method (faster)
+nrm[,gid] <- sapply(comb[,gid], cal_log2fc )
+save(nrm, file="nrm.rda")
+
+#for loop method...
 for(i in gid){
   nrm[,i] <- comb %>%
     pull(i) %>%
     cal_log2fc()
 }
-
 save(nrm, file="nrm.rda")
 
 #FOR LOOP FOR WILCOX-TEST ####
+# load("pval.rda")
 
 #make dataframe for storing p-values
 pval <- gid %>%
@@ -132,11 +129,10 @@ pval <- gid %>%
 head(pval)
 
 # Wilcox-test
-# load("pval.rda")
-
 for(i in gid){
-  pval[i,"p"] <- wilcox.test(as.numeric(as.matrix(nrm[,i])) ~ nrm$response_status,
-                             na.action = na.omit)$p.value
+  pval[i,"p"] <- wilcox.test(as.numeric(as.matrix(nrm[,i])) ~
+                               nrm$response_status,
+                               na.action = na.omit)$p.value
 }
 
 save(pval, file="pval.rda")
@@ -163,12 +159,9 @@ v <- comb %>%
 
 save(v, file="variance_table.rda")
 
-#names of columns with non-zero variance
+#list of genes with non-zero variance
 keep <- which(v!=0) %>%
   names()
-
-gene_var <- data.frame(v)
-rm(v)
 
 #PCA (RAW DATA)
 pc <- prcomp(comb %>% select(all_of(keep)),
@@ -191,8 +184,3 @@ autoplot(pc_nrm, data=nrm, col="response_status")
 head(comb$response_binary)
 fit <- glm(response_binary~as.numeric(ENSG00000119396)+as.numeric(ENSG00000119396),data = comb, family = "binomial")
 summary(fit)
-
-
-
-# x <- c("comb", "nrm", "pval", "gid", "gene_var", "cal_log2fc")
-# rm(list=setdiff(ls(), x))
