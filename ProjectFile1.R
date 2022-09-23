@@ -153,8 +153,8 @@ ggplot(pval, aes(x=p)) +
 # calculate variance of each column in expression data
 # load("variance_table.rda")
 v <- comb %>%
-  select(all_of(gid)) %>% 
-  var(use="pairwise.complete.obs") %>% 
+  select(all_of(gid)) %>%
+  var(use="pairwise.complete.obs") %>%
   diag()
 
 save(v, file="variance_table.rda")
