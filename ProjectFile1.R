@@ -63,6 +63,7 @@ tcga_coad_read_FU_tp<-tcga_coad_read %>%
   column_to_rownames("gene_id") %>%
   t() %>%
   data.frame() %>%
+  Filter(var, .) %>%
   rownames_to_column("bcr_patient_barcode")
 
 rm(patient_id, tcga_coad_read, coad_read_patient_id)
