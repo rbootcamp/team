@@ -25,7 +25,7 @@ FU_resp_data <- tcga_case_data %>% select(Cancer,bcr_patient_barcode, drug_name,
   distinct() %>% 
   pivot_wider(names_from = drug_name, values_from = value) %>%  
   filter(Fluorouracil==1) %>%
-  keep(~!all(is.na(.x)))
+  discard(~all(is.na(.)))
 
 patient_id<-colnames(tcga_coad_read)[-1] %>%
   gsub("\\.", "-", .)
