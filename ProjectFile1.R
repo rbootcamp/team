@@ -69,6 +69,7 @@ tcga_coad_read_FU_tp<-tcga_coad_read %>%
 rm(patient_id, tcga_coad_read, coad_read_patient_id)
 
 #Merging gene expression and drug response table ####
+# load("comb.rda")
 
 FU_resp_data2 %>% dim()
 tcga_coad_read_FU_tp %>% dim()
@@ -77,12 +78,16 @@ intersect(FU_resp_data2$bcr_patient_barcode,
           tcga_coad_read_FU_tp$bcr_patient_barcode)
 
 comb <- inner_join(FU_resp_data2, tcga_coad_read_FU_tp) %>%
+  select( !which(colSums(.[,sapply(.,is.numeric)])==0) %>% names() ) %>%
   mutate(response_status = ifelse(measure_of_response %in% c("Partial Response", "Complete Response"),
                                   "Responder", "Nonresponder"), .after = measure_of_response) %>%
   mutate(response_binary = recode(response_status,
                                   "Responder" = 1, "Nonresponder" = 0), .after = response_status)
 
-rm(FU_resp_data2, tcga_coad_read_FU_tp)
+comb %>% dim()
+
+save(comb, file="comb.rda")
+View(comb)
 
 #Calculate variance of each column in expression data####
 # load("variance.rda")
@@ -97,19 +102,13 @@ save(v, file="variance.rda")
 discard <- which(v==0) %>%
   names()
 discard %>% length()
+print(x<-ncol(comb))
 
-write.csv(discard, file="discarded_genes.csv")
-
-#Remove genes with zero variance####
-# load("comb.rda")
+#Remove genes with zero variance#
 comb <- comb %>% select(-discard)
+x - ncol(comb)
 
-comb %>% dim()
-
-save(comb, file="comb.rda")
-View(comb)
-
-rm(discard)
+rm(FU_resp_data2, tcga_coad_read_FU_tp, discard, x)
 
 #make vector of gene IDs
 gid <- comb %>%
