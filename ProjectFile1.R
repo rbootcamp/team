@@ -105,6 +105,7 @@ comb <- comb %>% select(-discard)
 comb %>% dim()
 
 save(comb, file="comb.rda")
+View(comb)
 
 rm(discard)
 
@@ -139,6 +140,7 @@ save(nrm, file="nrm.rda")
 #     cal_log2fc()
 # }
 # save(nrm, file="nrm.rda")
+View(nrm)
 
 #FOR LOOP FOR WILCOX-TEST ####
 # load("pval.rda")
@@ -158,6 +160,7 @@ for(i in gid){
 }
 
 save(pval, file="pval.rda")
+View(pval)
 
 #Data exploration and Visualisation ####
 
