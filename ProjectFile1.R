@@ -102,13 +102,13 @@ save(v, file="variance.rda")
 discard <- which(v==0) %>%
   names()
 discard %>% length()
-print(x<-ncol(comb))
+print(then<-ncol(comb))
 
 #Remove genes with zero variance#
 comb <- comb %>% select(-discard)
-x - ncol(comb)
+then - ncol(comb)
 
-rm(FU_resp_data2, tcga_coad_read_FU_tp, discard, x)
+rm(FU_resp_data2, tcga_coad_read_FU_tp, discard, then)
 
 #make vector of gene IDs
 gid <- comb %>%
