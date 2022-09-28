@@ -1,5 +1,5 @@
 setwd("~/capstone")
-pacman::p_load(tidyverse, janitor, readxl, ggfortify, ggrepel, DataExplorer, ClassDiscovery, pROC)
+pacman::p_load(tidyverse, janitor, ggfortify, DataExplorer, pheatmap, pROC)
 rm(list=ls())
 theme_set( theme_bw() )
 
