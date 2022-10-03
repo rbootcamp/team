@@ -77,7 +77,7 @@ gene_matrix <- tcga_coad_read %>%
 rm(fcil_case_data, tcga_coad_read, patient_id, common_id)
 
 #Merge gene expression and drug response table ####
-#load("comb.rda")
+# load("comb.rda")
 
 #Print ncol and nrow of each dataframe
 response_data %>% dim()
