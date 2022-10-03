@@ -77,7 +77,9 @@ gene_matrix <- tcga_coad_read %>%
 rm(fcil_case_data, tcga_coad_read, patient_id, common_id)
 
 #Merge gene expression and drug response table ####
-# load("comb.rda")
+
+
+#load("comb.rda")
 
 #Print ncol and nrow of each dataframe
 response_data %>% dim()
@@ -101,6 +103,7 @@ rm(response_data, gene_matrix)
 gid <- comb %>%
   select(starts_with("ENSG")) %>%
   colnames()
+
 
 #Normalise####
 #NORMALISATION FUNCTION#
@@ -161,14 +164,17 @@ View(pval)
 #Explore significant genes ####
 
 ggplot(pval, aes(x=p)) +
-  geom_histogram(alpha=0.4) +
-  labs(x=NULL, y=NULL, title="P-value")
+  geom_histogram(alpha=0.4, color="black", fill="lightblue") +
+  labs(x="P-value", y="Frequency", 
+       title="Frequency of genes with various P-value associated with 5-FU response")
+
 
 min(pval$p, na.rm= TRUE) %>% print()
 
 pval %>% filter(p < 0.05/nrow(pval)) %>% print()
 
 print(pval_top11 <- pval %>% filter(p < 1e-5))
+
 
 #Make vector of top 11 genes
 top11 <- pval_top11 %>% rownames()
@@ -214,11 +220,13 @@ modeldata <- nrm %>%
   select(bcr_patient_barcode, response_binary, all_of(top11[top11!="ENSG00000207395"])) %>%
   column_to_rownames("bcr_patient_barcode")
 
+
 #GLM: 10 Genes
 glm10 <- glm(response_binary~.,
     data = modeldata, family = "binomial")
 
   summary(glm10)
+  
 
 #Reduce model stepwise by AIC
 fit <- glm10 %>% step()
