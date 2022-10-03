@@ -156,29 +156,41 @@ pheatmap(mapdata,
 
 # GLM ####
 
-#Model top11 genes
-nrm %>%
+#Identify genes with high STERR
+geneSTERR<-nrm %>%
   select(bcr_patient_barcode, response_binary, all_of(BHgenes)) %>%
   column_to_rownames("bcr_patient_barcode") %>%
   glm(response_binary~.,
-      data = ., family = "binomial") %>%
-  summary()
+      data = ., family = "binomial")
+ 
+STERRmatrix<-summary(geneSTERR)$coef
 
-#Gene "ENSG00000207395" has a very high Std. Error (622.59703) -- removed from further analysis
+which(STERRmatrix$Estimate-STERRmatrix$"Std. Error")
+
+
+STERRmatrix %>% as.data.frame() %>%  mutate(diff= "Estimate"-"Std.Error")
+
+#Remove Genes with high STERR
+
+highSTERR<-c("ENSG00000105507", "ENSG00000207395", "ENSG00000230355", "ENSG00000231702", "ENSG00000250956", "ENSG00000252297", "ENSG00000253152" )
+
+goodGENES<- setdiff(BHgenes, highSTERR)
+
 modeldata <- nrm %>%
-  select(bcr_patient_barcode, response_binary, all_of(BHgenes[BHgenes!=c("ENSG00000105507", "ENSG00000207395", "ENSG00000230355", "ENSG00000231702", "ENSG00000250956", "ENSG00000252297", "ENSG00000253152" )])) %>%
+  select(bcr_patient_barcode, response_binary, all_of(goodGENES)) %>%
   column_to_rownames("bcr_patient_barcode")
 
-#GLM: 10 Genes
+#GLM: Geneset Genes
 glm10 <- glm(response_binary~.,
     data = modeldata, family = "binomial")
 
-  summary(glm10)
+  summary(glm10)$coef
 
 #Reduce model stepwise by AIC
 fit <- glm10 %>% step()
 
-  summary(fit)$coef
+  summary(fit)$coef %>%  class()
+  
 
 # smry <- summary(fit)$coef
 # fint <- confint(fit)
