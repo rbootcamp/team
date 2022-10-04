@@ -205,8 +205,7 @@ cor.test(mapdata$ENSG00000250956, mapdata$ENSG00000230355)
 
 #Table to annotate by response
 response_table <- nrm %>%
-  select(bcr_patient_barcode, response_status) %>%
-  column_to_rownames("bcr_patient_barcode")
+  select(response_status)
 
 
 #Heatmap
@@ -219,8 +218,7 @@ pheatmap(mapdata,
 
 #Model top11 genes
 nrm %>%
-  select(bcr_patient_barcode, response_binary, all_of(top11)) %>%
-  column_to_rownames("bcr_patient_barcode") %>%
+  select(response_binary, all_of(top11)) %>%
   glm(response_binary~.,
       data = ., family = "binomial") %>%
   summary()
