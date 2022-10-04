@@ -1,5 +1,5 @@
 setwd("~/capstone")
-pacman::p_load(tidyverse, janitor, ggfortify, DataExplorer, pheatmap, pROC)
+pacman::p_load(tidyverse, janitor, ggfortify, DataExplorer, pheatmap, pROC, Hmisc)
 rm(list=ls())
 theme_set( theme_bw() )
 
@@ -77,8 +77,6 @@ gene_matrix <- tcga_coad_read %>%
 rm(fcil_case_data, tcga_coad_read, patient_id, common_id)
 
 #Merge gene expression and drug response table ####
-
-
 #load("comb.rda")
 
 #Print ncol and nrow of each dataframe
@@ -91,7 +89,9 @@ comb <- inner_join(response_data, gene_matrix) %>%
   mutate(response_status = ifelse(measure_of_response %in% c("Partial Response", "Complete Response"),
                                   "Responder", "Nonresponder"), .after = measure_of_response) %>%
   mutate(response_binary = recode(response_status, #add columns for binomial response status
-                                  "Responder" = 1, "Nonresponder" = 0), .after = response_status)
+                                  "Responder" = 1, "Nonresponder" = 0), .after = response_status) %>%
+  column_to_rownames("bcr_patient_barcode")
+
 #New dimensions
 comb %>% dim()
 
@@ -183,12 +183,22 @@ top11 <- pval_top11 %>% rownames()
 
 #Subset top 11 significant genes
 mapdata <- nrm %>%
-  select(bcr_patient_barcode, all_of(top11)) %>%
-  column_to_rownames("bcr_patient_barcode")
+  select(all_of(top11))
 
 #Correlation Matrix
 plot_correlation(mapdata %>%
                    as.matrix())
+
+cor_matrix <- rcorr(mapdata %>% as.matrix())$P #Matrix of P-values for each correlation
+cor_matrix[lower.tri(cor_matrix,diag=TRUE)]=NA #Remove redundant values
+
+print(cor_table <- #Print as table ordered by significance
+        cor_matrix %>%
+        as.table() %>%
+        as.data.frame() %>%
+        na.omit() %>%
+        rename(p=Freq, gene1=Var1, gene2=Var2) %>% 
+        arrange(p))
 
 #The most highly correlated genes
 cor.test(mapdata$ENSG00000250956, mapdata$ENSG00000230355)
@@ -217,8 +227,7 @@ nrm %>%
 
 #Gene "ENSG00000207395" has a very high Std. Error (622.59703) -- removed from further analysis
 modeldata <- nrm %>%
-  select(bcr_patient_barcode, response_binary, all_of(top11[top11!="ENSG00000207395"])) %>%
-  column_to_rownames("bcr_patient_barcode")
+  select(response_binary, all_of(top11[top11!="ENSG00000207395"]))
 
 
 #GLM: 10 Genes
