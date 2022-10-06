@@ -179,6 +179,16 @@ print(pval_top11 <- pval %>% filter(p < 1e-5))
 #Make vector of top 11 genes
 top11 <- pval_top11 %>% rownames()
 
+#Benjamin Hochberg correction
+BHpval<-data.frame(rownames(pval)
+                   [which((p.adjust(pval$p, method = "BH"))<=0.05)],
+                   p.adjust(pval$p, method = "BH")
+                   [which((p.adjust(pval$p, method = "BH"))<=0.05)])
+
+#Make vector of BH genes
+BHgenes<-BHpval[,1]
+BHgenes<-BHgenes[1:16]
+
 #HEATMAP####
 
 #Subset top 11 significant genes
@@ -216,27 +226,37 @@ pheatmap(mapdata,
 
 # GLM ####
 
-#Model top11 genes
-nrm %>%
-  select(response_binary, all_of(top11)) %>%
+#Model BH genes
+glm16 <- nrm %>%
+  select(response_binary, all_of(BHgenes)) %>%
   glm(response_binary~.,
-      data = ., family = "binomial") %>%
-  summary()
+      data = ., family = "binomial")
+  summary(glm16)
 
-#Gene "ENSG00000207395" has a very high Std. Error (622.59703) -- removed from further analysis
+#List of 'good' genes without large Std. Error
+smry <- summary(glm16)$coef %>%
+  as.data.frame() %>%
+  rename(std_error="Std. Error") %>%
+  select(std_error) %>%
+  filter(std_error<1e3) %>%
+  rownames()
+top9 <- smry[-1] #Remove "(Intercept)"
+rm(glm16, smry)
+
+#Genes with high Std. Error removed from further analysis
 modeldata <- nrm %>%
-  select(response_binary, all_of(top11[top11!="ENSG00000207395"]))
+  select(response_binary, all_of(top9))
 
 
-#GLM: 10 Genes
-glm10 <- glm(response_binary~.,
-    data = modeldata, family = "binomial")
+#GLM: 9 Genes
+glm9 <- glm(response_binary~.,
+             data = modeldata, family = "binomial")
 
-  summary(glm10)
-  
+  summary(glm9)
+
 
 #Reduce model stepwise by AIC
-fit <- glm10 %>% step()
+fit <- glm9 %>% step()
 
   summary(fit)$coef
 
