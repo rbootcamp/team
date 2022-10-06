@@ -1,5 +1,5 @@
 setwd("~/capstone")
-pacman::p_load(tidyverse, janitor, ggfortify, DataExplorer, pheatmap, pROC, Hmisc)
+pacman::p_load(tidyverse, janitor, ggfortify, DataExplorer, pheatmap, pROC)
 rm(list=ls())
 theme_set( theme_bw() )
 
@@ -199,7 +199,7 @@ mapdata <- nrm %>%
 plot_correlation(mapdata %>%
                    as.matrix())
 
-cor_matrix <- rcorr(mapdata %>% as.matrix())$P #Matrix of P-values for each correlation
+cor_matrix <- Hmisc::rcorr(mapdata %>% as.matrix())$P #Matrix of P-values for each correlation
 cor_matrix[lower.tri(cor_matrix,diag=TRUE)]=NA #Remove redundant values
 
 print(cor_table <- #Print as table ordered by significance
